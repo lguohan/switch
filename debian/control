@@ -1,0 +1,11 @@
+Source: p4-switch
+Maintainer: Guohan Lu <gulv@microsoft.com>
+Section: net
+Priority: optional
+Build-Depends: debhelper (>=9), autotools-dev
+Standards-Version: 1.0.0
+
+Package: p4-switch
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains p4 switch and sai library.
