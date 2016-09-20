@@ -2625,9 +2625,6 @@ switch_pd_bd_table_delete_entry(switch_device_t device,
 {
     p4_pd_status_t status = 0;
 
-    status = p4_pd_dc_bd_action_profile_del_member(g_sess_hdl, device,
-                                                   bd_info->bd_entry);
-
 #ifndef P4_MULTICAST_DISABLE
     status = p4_pd_dc_bd_flood_table_delete(g_sess_hdl, device,
                                             bd_info->uuc_entry);
@@ -2639,6 +2636,9 @@ switch_pd_bd_table_delete_entry(switch_device_t device,
 
     status = p4_pd_dc_port_vlan_mapping_table_delete(g_sess_hdl, device,
                                                      bd_info->cpu_entry);
+
+    status = p4_pd_dc_bd_action_profile_del_member(g_sess_hdl, device,
+                                                   bd_info->bd_entry);
 
     p4_pd_complete_operations(g_sess_hdl);
     return status;
@@ -5580,6 +5580,17 @@ switch_pd_ingress_fabric_table_add_entry(switch_device_t device)
         p4_pd_device,
         &match_spec,
         &entry_hdl);
+
+    // entry for fabric multicast
+    p4_pd_entry_hdl_t entry_hdl2;
+    p4_pd_dc_fabric_ingress_dst_lkp_match_spec_t match_spec2;
+    memset(&match_spec2, 0, sizeof(p4_pd_dc_fabric_ingress_dst_lkp_match_spec_t));
+    match_spec2.fabric_header_dstDevice = 127;
+    status = p4_pd_dc_fabric_ingress_dst_lkp_table_add_with_terminate_fabric_multicast_packet(
+        g_sess_hdl,
+        p4_pd_device,
+        &match_spec2,
+        &entry_hdl2);
     p4_pd_complete_operations(g_sess_hdl);
     return status;
 }
