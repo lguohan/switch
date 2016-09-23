@@ -576,12 +576,13 @@ switch_packet_hostif_create(switch_device_t device, switch_hostif_info_t *hostif
 
 
     memset(&mac, 0, sizeof(switch_mac_addr_t));
-    if (memcmp(&api_switch_info.switch_mac, &mac, ETH_LEN) != 0) {
+//    if (memcmp(&api_switch_info.switch_mac, &mac, ETH_LEN) != 0) 
+    {
         // set the mac address
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, intf_name, IFNAMSIZ);
         ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-        memcpy(ifr.ifr_addr.sa_data,  &api_switch_info.switch_mac, ETH_LEN);
+        memcpy(ifr.ifr_addr.sa_data,  api_switch_info.switch_mac, 6);
         if ((ioctl(intf_fd, SIOCSIFHWADDR, (void *)&ifr)) < 0) {
             perror("ioctl failed");
             close(intf_fd);

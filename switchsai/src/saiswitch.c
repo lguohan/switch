@@ -22,6 +22,8 @@ limitations under the License.
 extern sai_object_id_t sai_hostif_get_default();
 static sai_api_t api_id = SAI_API_SWITCH;
 sai_switch_notification_t sai_switch_notifications;
+static int mac_set = 0;
+static unsigned char def_mac[6] = {0x00, 0x01, 0x04, 0x06, 0x08, 0x03};
 
 sai_status_t sai_initialize_switch(
         _In_ sai_switch_profile_id_t profile_id,
@@ -32,6 +34,7 @@ sai_status_t sai_initialize_switch(
     SAI_LOG_ENTER();
 
     sai_status_t status = SAI_STATUS_SUCCESS;
+    switch_api_capability_t api_switch_info;
 
     if (!switch_notifications) {
         status = SAI_STATUS_INVALID_PARAMETER;
@@ -41,6 +44,10 @@ sai_status_t sai_initialize_switch(
     }
 
     memcpy(&sai_switch_notifications, switch_notifications, sizeof(sai_switch_notification_t));
+
+    switch_api_capability_get(device, &api_switch_info);
+    memcpy(&api_switch_info.switch_mac, def_mac, 6);
+    switch_api_capability_set(device, &api_switch_info);
 
     SAI_LOG_EXIT();
 
@@ -69,8 +76,6 @@ void sai_disconnect_switch(void) {
 }
 
 
-static int mac_set = 0;
-static unsigned char def_mac[6] = {0x00, 0x01, 0x04, 0x06, 0x08, 0x03};
 /*
 * Routine Description:
 *    Set switch attribute value
@@ -97,6 +102,7 @@ sai_status_t sai_set_switch_attribute(
         return status;
     }
 
+    switch_api_capability_get(device, &api_switch_info);
     switch (attr->id) {
         case SAI_SWITCH_ATTR_SRC_MAC_ADDRESS:
             memcpy(&api_switch_info.switch_mac, &attr->value.mac, 6);
