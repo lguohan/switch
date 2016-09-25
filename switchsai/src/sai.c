@@ -350,7 +350,7 @@ void sai_log(int level, sai_api_t api, char *fmt, ...) {
   va_start(args, fmt);
   vsnprintf(log_buffer, SAI_LOG_BUFFER_SIZE, fmt, args);
   va_end(args);
-#if 1
+#if 0
   printf("%s: %s\n", module[api], log_buffer);
 #else
   syslog(LOG_DEBUG - level, "%s: %s", module[api], log_buffer);
