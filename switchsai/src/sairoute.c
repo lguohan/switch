@@ -18,6 +18,7 @@ limitations under the License.
 #include "saiinternal.h"
 #include <switchapi/switch_l3.h>
 #include <switchapi/switch_hostif.h>
+#include <switchapi/switch_capability.h>
 
 static sai_api_t api_id = SAI_API_ROUTE;
 
@@ -105,6 +106,7 @@ sai_status_t sai_create_route_entry(
     switch_handle_t vrf_handle = 0;
     char entry_string[SAI_MAX_ENTRY_STRING_LEN];
     int action=-1, pri=-1;
+    switch_api_capability_t api_switch_info;
 
     if (!unicast_route_entry) {
         status = SAI_STATUS_INVALID_PARAMETER;
@@ -124,6 +126,12 @@ sai_status_t sai_create_route_entry(
     sai_route_entry_attribute_parse(attr_count, attr_list, &nhop_handle, &action, &pri);
 
     if (sai_object_type_query(nhop_handle) == SAI_OBJECT_TYPE_ROUTER_INTERFACE) {
+        nhop_handle = 0;
+        action = SAI_PACKET_ACTION_TRAP;
+    }
+
+    switch_api_capability_get(device, &api_switch_info);
+    if (nhop_handle == api_switch_info.port_list[64]) {
         nhop_handle = 0;
         action = SAI_PACKET_ACTION_TRAP;
     }
