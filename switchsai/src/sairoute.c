@@ -123,14 +123,14 @@ sai_status_t sai_create_route_entry(
     sai_route_entry_parse(unicast_route_entry, &vrf_handle, &ip_addr);
     sai_route_entry_attribute_parse(attr_count, attr_list, &nhop_handle, &action, &pri);
 
-    if (sai_object_type_query(nhop_handle) == SAI_OBJECT_TYPE_ROUTER_INTERFACE) {
+    if ((sai_object_type_query(nhop_handle) == SAI_OBJECT_TYPE_ROUTER_INTERFACE) || (nhop_handle == switch_api_cpu_nhop_get(SWITCH_HOSTIF_REASON_CODE_GLEAN))) {
         nhop_handle = 0;
         action = SAI_PACKET_ACTION_TRAP;
     }
 
     sai_route_entry_to_string(unicast_route_entry, entry_string);
 
-    if(!nhop_handle && action != -1) {
+    if (!nhop_handle && action != -1) {
         switch(action) {
             case SAI_PACKET_ACTION_DROP:
                 nhop_handle = switch_api_cpu_nhop_get(SWITCH_HOSTIF_REASON_CODE_NULL_DROP);
