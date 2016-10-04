@@ -219,6 +219,10 @@ sai_status_t sai_set_route_entry_attribute(
   SAI_LOG_ENTER();
 
   sai_status_t status = SAI_STATUS_SUCCESS;
+  switch_ip_addr_t ip_addr;
+  switch_handle_t vrf_handle = 0;
+  switch_handle_t nhop_handle = 0;
+  switch_status_t switch_status = SWITCH_STATUS_SUCCESS;
 
   if (!unicast_route_entry) {
     status = SAI_STATUS_INVALID_PARAMETER;
@@ -230,6 +234,21 @@ sai_status_t sai_set_route_entry_attribute(
     status = SAI_STATUS_INVALID_PARAMETER;
     SAI_LOG_ERROR("null attribute: %s", sai_status_to_string(status));
     return status;
+  }
+
+  sai_route_entry_parse(unicast_route_entry, &vrf_handle, &ip_addr);
+
+  switch(attr->id) {
+    case SAI_ROUTE_ATTR_NEXT_HOP_ID:
+      nhop_handle = (switch_handle_t)attr->value.oid;
+      if (nhop_handle) {
+        switch_status =
+          switch_api_l3_route_add(device, vrf_handle, &ip_addr, nhop_handle);
+        status = sai_switch_status_to_sai_status(switch_status);
+      }
+      break;
+    default:
+      break;
   }
 
   SAI_LOG_EXIT();
