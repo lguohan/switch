@@ -33,71 +33,122 @@ static sai_api_t api_id = SAI_API_PORT;
 *    SAI_STATUS_SUCCESS on success
 *    Failure status code on error
 */
-sai_status_t sai_set_port_attribute(
-        _In_ sai_object_id_t port_id, 
-        _In_ const sai_attribute_t *attr) {
+sai_status_t sai_set_port_attribute(_In_ sai_object_id_t port_id,
+                                    _In_ const sai_attribute_t *attr) {
+  SAI_LOG_ENTER();
 
-    SAI_LOG_ENTER();
+  sai_status_t status = SAI_STATUS_SUCCESS;
+  switch_status_t switch_status = SWITCH_STATUS_SUCCESS;
+  switch_handle_t vlan_handle = SWITCH_API_INVALID_HANDLE;
+  switch_port_speed_t port_speed;
+  bool trust = FALSE;
 
-    sai_status_t status = SAI_STATUS_SUCCESS;
-    switch_status_t switch_status = SWITCH_STATUS_SUCCESS;
-    switch_handle_t vlan_handle = SWITCH_API_INVALID_HANDLE;
-    switch_port_speed_t port_speed;
+  if (!attr) {
+    status = SAI_STATUS_INVALID_PARAMETER;
+    SAI_LOG_ERROR("null attribute: %s", sai_status_to_string(status));
+    return status;
+  }
 
-    if (!attr) {
-        status = SAI_STATUS_INVALID_PARAMETER;
-        SAI_LOG_ERROR("null attribute: %s",
-                       sai_status_to_string(status));
+  switch (attr->id) {
+    case SAI_PORT_ATTR_PORT_VLAN_ID:
+      switch_status = switch_api_vlan_id_to_handle_get(
+          (switch_vlan_t)attr->value.u16, &vlan_handle);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to get vlan %d: %s",
+                      sai_status_to_string(status));
         return status;
-    }
+      }
+      /* TBD: Default BD */
+      break;
 
-    switch (attr->id) {
-        case SAI_PORT_ATTR_PORT_VLAN_ID:
-            switch_status = switch_api_vlan_id_to_handle_get((switch_vlan_t) attr->value.u16, &vlan_handle);
-            status = sai_switch_status_to_sai_status(switch_status);
-            if (status != SAI_STATUS_SUCCESS) {
-                SAI_LOG_ERROR("failed to get vlan %d: %s",
-                              sai_status_to_string(status));
-                return status;
-            }
-            /* TBD: Default BD */
+    case SAI_PORT_ATTR_QOS_DEFAULT_TC:
+      switch_status =
+          switch_api_port_tc_default_set(device, port_id, attr->value.u8);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set default tc for port %d: %s",
+                      sai_status_to_string(status));
+        return status;
+      }
+      break;
+    case SAI_PORT_ATTR_GLOBAL_FLOW_CONTROL:
+      // need for disabling ports on shutdown
+      break;
+    case SAI_PORT_ATTR_INGRESS_FILTERING:
+      // need to enable ingress filtering
+      break;
+    case SAI_PORT_ATTR_SPEED:
+      if ((status = sai_port_speed_to_switch_port_speed(
+               attr->value.u32, &port_speed)) != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("bad port speed for port %d speed: %s",
+                      (port_id & 0xFFFF),
+                      sai_status_to_string(status));
+        return status;
+      }
+      switch_status =
+          switch_api_port_speed_set(device,
+                                    (switch_port_t)(port_id & 0xFFFF),
+                                    (switch_port_speed_t)attr->value.u8);
+      if ((status = sai_switch_status_to_sai_status(switch_status)) !=
+          SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set port %d speed: %s",
+                      (port_id & 0xFFFF),
+                      sai_status_to_string(status));
+        return status;
+      }
+    case SAI_PORT_ATTR_QOS_DSCP_TO_TC_MAP:
+    case SAI_PORT_ATTR_QOS_DSCP_TO_COLOR_MAP:
+      trust = attr->value.oid != 0 ? TRUE : FALSE;
+      switch_status = switch_api_port_trust_dscp_set(device, port_id, trust);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set dscp trust for port %d: %s",
+                      sai_status_to_string(status));
+        return status;
+      }
+      switch_status = switch_api_port_qos_group_ingress_set(
+          device, port_id, attr->value.oid);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set ingress qos handle for port %d: %s",
+                      sai_status_to_string(status));
+        return status;
+      }
 
-            break;
-        case SAI_PORT_ATTR_GLOBAL_FLOW_CONTROL:
-            // need for disabling ports on shutdown
-            break;
-        case SAI_PORT_ATTR_INGRESS_FILTERING:
-            // need to enable ingress filtering
-            break;
-        case SAI_PORT_ATTR_SPEED:
-            if ((status = sai_port_speed_to_switch_port_speed(
-                    attr->value.u32,
-                    &port_speed))
-                != SAI_STATUS_SUCCESS) {
-                SAI_LOG_ERROR("bad port speed for port %d speed: %s",
-                    (port_id & 0xFFFF), sai_status_to_string(status));
-                return status;
-            }
-            switch_status = switch_api_port_speed_set(
-                device,
-                (switch_port_t) (port_id & 0xFFFF),
-                (switch_port_speed_t) attr->value.u8);
-            if ((status = sai_switch_status_to_sai_status(switch_status))
-                != SAI_STATUS_SUCCESS) {
-                SAI_LOG_ERROR("failed to set port %d speed: %s",
-                    (port_id & 0xFFFF), sai_status_to_string(status));
-                return status;
-            }
-            break;
+      break;
 
+    case SAI_PORT_ATTR_QOS_TC_TO_QUEUE_MAP:
+    case SAI_PORT_ATTR_QOS_TC_TO_PRIORITY_GROUP_MAP:
+      switch_status =
+          switch_api_port_qos_group_tc_set(device, port_id, attr->value.oid);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set ingress tc handle for port %d: %s",
+                      sai_status_to_string(status));
+        return status;
+      }
+      break;
 
-        default:
-            break;
-    }
+    case SAI_PORT_ATTR_QOS_TC_AND_COLOR_TO_DOT1P_MAP:
+    case SAI_PORT_ATTR_QOS_TC_AND_COLOR_TO_DSCP_MAP:
+      switch_status = switch_api_port_qos_group_egress_set(
+          device, port_id, attr->value.oid);
+      status = sai_switch_status_to_sai_status(switch_status);
+      if (status != SAI_STATUS_SUCCESS) {
+        SAI_LOG_ERROR("failed to set egress qos handle for port %d: %s",
+                      sai_status_to_string(status));
+        return status;
+      }
+      break;
 
-    SAI_LOG_EXIT();
+    default:
+      break;
+  }
 
-    return (sai_status_t) status;
+  SAI_LOG_EXIT();
+
+  return (sai_status_t)status;
 }
 
 /*
@@ -204,11 +255,11 @@ sai_status_t sai_get_port_attribute(
                status = SAI_STATUS_NOT_SUPPORTED;
                break;
         }
-    }
+  }
 
-    SAI_LOG_EXIT();
+  SAI_LOG_EXIT();
 
-    return (sai_status_t) status;
+  return (sai_status_t)status;
 }
 
 /*
@@ -224,33 +275,29 @@ sai_status_t sai_get_port_attribute(
 * Return Values:
 *    SAI_STATUS_SUCCESS on success
 *    Failure status code on error
-*/ 
-sai_status_t sai_get_port_stats(
-        _In_ sai_object_id_t port_id, 
-        _In_ const sai_port_stat_counter_t *counter_ids,
-        _In_ uint32_t number_of_counters,
-        _Out_ uint64_t* counters) {
+*/
+sai_status_t sai_get_port_stats(_In_ sai_object_id_t port_id,
+                                _In_ const sai_port_stat_counter_t *counter_ids,
+                                _In_ uint32_t number_of_counters,
+                                _Out_ uint64_t *counters) {
+  SAI_LOG_ENTER();
 
-    SAI_LOG_ENTER();
+  sai_status_t status = SAI_STATUS_SUCCESS;
 
-    sai_status_t status = SAI_STATUS_SUCCESS;
+  SAI_LOG_EXIT();
 
-    SAI_LOG_EXIT();
-
-    return (sai_status_t) status;
+  return (sai_status_t)status;
 }
 
 /*
 * Port methods table retrieved with sai_api_query()
 */
-sai_port_api_t port_api = {
-    .set_port_attribute                =             sai_set_port_attribute,
-    .get_port_attribute                =             sai_get_port_attribute,
-    .get_port_stats                    =             sai_get_port_stats
-};
+sai_port_api_t port_api = {.set_port_attribute = sai_set_port_attribute,
+                           .get_port_attribute = sai_get_port_attribute,
+                           .get_port_stats = sai_get_port_stats};
 
 sai_status_t sai_port_initialize(sai_api_service_t *sai_api_service) {
-    SAI_LOG_DEBUG("Initializing port");
-    sai_api_service->port_api = port_api;
-    return SAI_STATUS_SUCCESS;
+  SAI_LOG_DEBUG("Initializing port");
+  sai_api_service->port_api = port_api;
+  return SAI_STATUS_SUCCESS;
 }

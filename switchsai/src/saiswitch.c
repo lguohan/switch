@@ -26,55 +26,44 @@ static int mac_set = 0;
 static unsigned char def_mac[6] = {0x00, 0x01, 0x04, 0x06, 0x08, 0x03};
 
 sai_status_t sai_initialize_switch(
-        _In_ sai_switch_profile_id_t profile_id,
-        _In_reads_z_(SAI_MAX_HARDWARE_ID_LEN) char* switch_hardware_id,
-        _In_reads_opt_z_(SAI_MAX_FIRMWARE_PATH_NAME_LEN) char* firmware_path_name,
-        _In_ sai_switch_notification_t* switch_notifications) {
+    _In_ sai_switch_profile_id_t profile_id,
+    _In_reads_z_(SAI_MAX_HARDWARE_ID_LEN) char *switch_hardware_id,
+    _In_reads_opt_z_(SAI_MAX_FIRMWARE_PATH_NAME_LEN) char *firmware_path_name,
+    _In_ sai_switch_notification_t *switch_notifications) {
+  SAI_LOG_ENTER();
 
-    SAI_LOG_ENTER();
 
-    sai_status_t status = SAI_STATUS_SUCCESS;
-    switch_api_capability_t api_switch_info;
+  sai_status_t status = SAI_STATUS_SUCCESS;
+  switch_api_capability_t api_switch_info;
 
-    if (!switch_notifications) {
-        status = SAI_STATUS_INVALID_PARAMETER;
-        SAI_LOG_ERROR("null switch notifications: %s",
-                       sai_status_to_string(status));
-        return status;
-    }
+  memcpy(&sai_switch_notifications,
+         switch_notifications,
+         sizeof(sai_switch_notification_t));
 
-    memcpy(&sai_switch_notifications, switch_notifications, sizeof(sai_switch_notification_t));
+  switch_api_capability_get(device, &api_switch_info);
+  memcpy(&api_switch_info.switch_mac, def_mac, 6);
+  switch_api_capability_set(device, &api_switch_info);
 
-    switch_api_capability_get(device, &api_switch_info);
-    memcpy(&api_switch_info.switch_mac, def_mac, 6);
-    switch_api_capability_set(device, &api_switch_info);
-
-    SAI_LOG_EXIT();
-
-    return (sai_status_t) status;
+  SAI_LOG_EXIT();
+  return (sai_status_t)status;
 }
 
-void sai_shutdown_switch(
-        _In_ bool warm_restart_hint) {
-}
+void sai_shutdown_switch(_In_ bool warm_restart_hint) {}
 
 sai_status_t sai_connect_switch(
-        _In_ sai_switch_profile_id_t profile_id,
-        _In_reads_z_(SAI_MAX_HARDWARE_ID_LEN) char* switch_hardware_id,
-        _In_ sai_switch_notification_t* switch_notifications) {
+    _In_ sai_switch_profile_id_t profile_id,
+    _In_reads_z_(SAI_MAX_HARDWARE_ID_LEN) char *switch_hardware_id,
+    _In_ sai_switch_notification_t *switch_notifications) {
+  SAI_LOG_ENTER();
 
-    SAI_LOG_ENTER();
+  sai_status_t status = SAI_STATUS_SUCCESS;
 
-    sai_status_t status = SAI_STATUS_SUCCESS;
+  SAI_LOG_EXIT();
 
-    SAI_LOG_EXIT();
-
-    return (sai_status_t) status;
+  return (sai_status_t)status;
 }
 
-void sai_disconnect_switch(void) {
-}
-
+void sai_disconnect_switch(void) {}
 
 /*
 * Routine Description:
@@ -195,25 +184,24 @@ sai_status_t sai_get_switch_attribute(
 	}
     }
 
-    SAI_LOG_EXIT();
+  SAI_LOG_EXIT();
 
-    return (sai_status_t) status;
+  return (sai_status_t)status;
 }
 
 /*
-* Switch method table retrieved with sai_api_query() 
+* Switch method table retrieved with sai_api_query()
 */
 sai_switch_api_t switch_api = {
-    .initialize_switch                 =             sai_initialize_switch,
-    .shutdown_switch                   =             sai_shutdown_switch,
-    .connect_switch                    =             sai_connect_switch,
-    .disconnect_switch                 =             sai_disconnect_switch,
-    .set_switch_attribute              =             sai_set_switch_attribute,
-    .get_switch_attribute              =             sai_get_switch_attribute
-};
+    .initialize_switch = sai_initialize_switch,
+    .shutdown_switch = sai_shutdown_switch,
+    .connect_switch = sai_connect_switch,
+    .disconnect_switch = sai_disconnect_switch,
+    .set_switch_attribute = sai_set_switch_attribute,
+    .get_switch_attribute = sai_get_switch_attribute};
 
 sai_status_t sai_switch_initialize(sai_api_service_t *sai_api_service) {
-    SAI_LOG_DEBUG("Initializing switch");
-    sai_api_service->switch_api = switch_api;
-    return SAI_STATUS_SUCCESS;
+  SAI_LOG_DEBUG("Initializing switch");
+  sai_api_service->switch_api = switch_api;
+  return SAI_STATUS_SUCCESS;
 }
