@@ -621,6 +621,8 @@ switch_status_t switch_api_ecmp_delete(switch_device_t device,
   if (nhop_info->type != SWITCH_NHOP_INDEX_TYPE_ONE_PATH) {
     ecmp_info = &(SWITCH_NHOP_ECMP_INFO(nhop_info));
     if (ecmp_info->count > 0) {
+      int i = 0;
+      switch_handle_t *nhop_handle_list = switch_malloc(sizeof(switch_handle_t), ecmp_info->count);
       node = tommy_list_head(&(ecmp_info->members));
       while (node) {
         ecmp_member = (switch_ecmp_member_t *)node->data;
@@ -628,9 +630,15 @@ switch_status_t switch_api_ecmp_delete(switch_device_t device,
         if (!nhop_info) {
           return SWITCH_STATUS_INVALID_NHOP;
         }
-        nhop_info->ref_count--;
+//        nhop_info->ref_count--;
+        *(nhop_handle_list + i) = ecmp_member->nhop_handle;
         node = node->next;
+        i++;
+        if( i == ecmp_info->count)
+          break;
       }
+      switch_api_ecmp_member_delete( device, handle,  ecmp_info->count, nhop_handle_list);
+      switch_free(nhop_handle_list);
     }
 #ifdef SWITCH_PD
     status = switch_pd_ecmp_group_delete(device, ecmp_info->pd_group_hdl);
