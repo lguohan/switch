@@ -59,7 +59,7 @@ sai_status_t sai_create_router_interface(
   sai_status_t status = SAI_STATUS_SUCCESS;
   switch_api_interface_info_t intf_info;
   const sai_attribute_t *attribute;
-  sai_router_interface_type_t sai_intf_type = -1;
+  sai_router_interface_type_t sai_intf_type = SAI_ROUTER_INTERFACE_TYPE_PORT;
   uint32_t index = 0;
 
   if (!attr_list) {
